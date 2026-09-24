@@ -3,7 +3,6 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const initSqlJs = require("sql.js");
 
 const app = express();
 
@@ -18,26 +17,75 @@ const ADMIN_PASSWORD =
 const INSTAGRAM_API_KEY =
     process.env.INSTAGRAM_API_KEY || "";
 
-const DATA_DIR =
-    path.join(__dirname, "data");
+const SUPABASE_URL =
+    process.env.SUPABASE_URL || "";
 
-const DB_FILE =
-    path.join(DATA_DIR, "confessions.sqlite");
+const SUPABASE_SERVICE_ROLE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, {
-        recursive: true
+async function supabaseRequest(pathname, options = {}) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error("Supabase environment variables are not configured.");
+    }
+
+    const response = await fetch(
+        SUPABASE_URL.replace(/\\/$/, "") + pathname,
+        {
+            ...options,
+            headers: {
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                ...(options.headers || {})
+            },
+            signal: AbortSignal.timeout(15000)
+        }
+    );
+
+    const text = await response.text();
+    let data = null;
+
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch {
+            data = text;
+        }
+    }
+
+    if (!response.ok) {
+        console.error("Supabase error:", response.status, data);
+        throw new Error("Supabase request failed.");
+    }
+
+    return data;
+}
+
+async function insertConfession(message, instagramUsername) {
+    return supabaseRequest("/rest/v1/confessions", {
+        method: "POST",
+        headers: {
+            "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({
+            message,
+            instagram_username: instagramUsername
+        })
     });
 }
 
-let db;
+async function listConfessions() {
+    return supabaseRequest(
+        "/rest/v1/confessions?select=id,message,instagram_username,created_at&order=id.desc",
+        { method: "GET" }
+    );
+}
 
-function saveDatabase() {
-    const data = db.export();
-
-    fs.writeFileSync(
-        DB_FILE,
-        Buffer.from(data)
+async function deleteConfession(id) {
+    return supabaseRequest(
+        "/rest/v1/confessions?id=eq." + encodeURIComponent(id),
+        { method: "DELETE", headers: { "Prefer": "return=minimal" } }
     );
 }
 
@@ -249,56 +297,11 @@ async function lookupInstagramProfile(username) {
 }
 
 async function startServer() {
-    const SQL = await initSqlJs();
-
-    if (fs.existsSync(DB_FILE)) {
-        const file = fs.readFileSync(DB_FILE);
-
-        db = new SQL.Database(file);
-    } else {
-        db = new SQL.Database();
-    }
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS confessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message TEXT NOT NULL,
-            instagram_username TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    /*
-     * If an older database was created before
-     * instagram_username was required, make sure
-     * the column exists.
-     */
-
-    try {
-        const columns = db.exec(`
-            PRAGMA table_info(confessions)
-        `);
-
-        if (columns.length) {
-            const names = columns[0].values.map(
-                row => row[1]
-            );
-
-            if (!names.includes("instagram_username")) {
-                db.run(`
-                    ALTER TABLE confessions
-                    ADD COLUMN instagram_username TEXT
-                `);
-            }
-        }
-    } catch (error) {
-        console.error(
-            "Database migration warning:",
-            error.message
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error(
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured."
         );
     }
-
-    saveDatabase();
 
     app.use(express.json({
         limit: "20kb"
@@ -314,10 +317,6 @@ async function startServer() {
             path.join(__dirname, "public")
         )
     );
-
-    /*
-     * Instagram username verification
-     */
 
     app.get(
         "/api/check-instagram",
@@ -373,10 +372,6 @@ async function startServer() {
         }
     );
 
-    /*
-     * Submit confession
-     */
-
     app.post(
         "/api/confession",
         async (req, res) => {
@@ -415,11 +410,6 @@ async function startServer() {
             }
 
             try {
-                /*
-                 * Verify again on the server.
-                 * Never trust the green check in the browser.
-                 */
-
                 const profile =
                     await lookupInstagramProfile(
                         username
@@ -437,22 +427,10 @@ async function startServer() {
                     profile.username ||
                     username;
 
-                db.run(
-                    `
-                    INSERT INTO confessions
-                    (
-                        message,
-                        instagram_username
-                    )
-                    VALUES (?, ?)
-                    `,
-                    [
-                        message,
-                        verifiedUsername
-                    ]
+                await insertConfession(
+                    message,
+                    verifiedUsername
                 );
-
-                saveDatabase();
 
                 return res.json({
                     success: true
@@ -467,62 +445,37 @@ async function startServer() {
                 return res.status(503).json({
                     success: false,
                     error:
-                        "Unable to verify Instagram right now. Please try again."
+                        "Unable to save your confession right now. Please try again."
                 });
             }
         }
     );
 
-    /*
-     * Admin API
-     */
-
     app.get(
         "/api/confessions",
         adminAuth,
-        (req, res) => {
-            const result = db.exec(`
-                SELECT
-                    id,
-                    message,
-                    instagram_username,
-                    created_at
-                FROM confessions
-                ORDER BY id DESC
-            `);
+        async (req, res) => {
+            try {
+                const rows = await listConfessions();
+                return res.json(rows);
+            } catch (error) {
+                console.error(
+                    "Admin list error:",
+                    error.message
+                );
 
-            if (!result.length) {
-                return res.json([]);
-            }
-
-            const columns =
-                result[0].columns;
-
-            const values =
-                result[0].values;
-
-            const rows =
-                values.map(row => {
-                    const item = {};
-
-                    columns.forEach(
-                        (column, index) => {
-                            item[column] =
-                                row[index];
-                        }
-                    );
-
-                    return item;
+                return res.status(503).json({
+                    error:
+                        "Unable to load confessions right now."
                 });
-
-            res.json(rows);
+            }
         }
     );
 
     app.delete(
         "/api/confession/:id",
         adminAuth,
-        (req, res) => {
+        async (req, res) => {
             const id =
                 Number(req.params.id);
 
@@ -534,25 +487,26 @@ async function startServer() {
                 });
             }
 
-            db.run(
-                `
-                DELETE FROM confessions
-                WHERE id = ?
-                `,
-                [id]
-            );
+            try {
+                await deleteConfession(id);
 
-            saveDatabase();
+                return res.json({
+                    success: true
+                });
+            } catch (error) {
+                console.error(
+                    "Delete error:",
+                    error.message
+                );
 
-            return res.json({
-                success: true
-            });
+                return res.status(503).json({
+                    success: false,
+                    error:
+                        "Unable to delete confession right now."
+                });
+            }
         }
     );
-
-    /*
-     * Admin page
-     */
 
     app.get(
         "/admin",
@@ -586,13 +540,15 @@ async function startServer() {
                 ` http://localhost:${PORT}/admin`
             );
             console.log(
+                " Supabase persistence enabled"
+            );
+            console.log(
                 "================================"
             );
             console.log("");
         }
     );
 }
-
 startServer().catch(error => {
     console.error(
         "Failed to start server:"

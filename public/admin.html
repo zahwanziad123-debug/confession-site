@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#08080d"
+    >
+
+    <title>Confessions Admin</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at 10% 10%,
+                    rgba(255, 0, 128, .18),
+                    transparent 30%
+                ),
+                radial-gradient(
+                    circle at 90% 20%,
+                    rgba(0, 191, 255, .15),
+                    transparent 30%
+                ),
+                #08080d;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            margin: 0 0 7px;
+            font-size: 32px;
+            letter-spacing: -.03em;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: rgba(255, 255, 255, .45);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            padding: 11px 16px;
+            color: white;
+            background: #7928ff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .count {
+            margin-left: auto;
+            color: rgba(255, 255, 255, .35);
+            font-size: 13px;
+        }
+
+        .empty {
+            padding: 45px 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 20px;
+            color: rgba(255, 255, 255, .45);
+            background: rgba(255, 255, 255, .04);
+        }
+
+        .confession {
+            margin-bottom: 14px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, .055);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, .025);
+        }
+
+        .message {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin-top: 16px;
+            font-size: 12px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            color: rgba(255, 255, 255, .55);
+            background: rgba(255, 255, 255, .055);
+            border: 1px solid rgba(255, 255, 255, .07);
+        }
+
+        .instagram {
+            color: #55e6a5;
+            background: rgba(85, 230, 165, .07);
+            border-color: rgba(85, 230, 165, .14);
+        }
+
+        .actions {
+            display: flex;
+            margin-top: 16px;
+        }
+
+        .delete {
+            color: #ff6b9c;
+            background: rgba(255, 0, 80, .12);
+            border: 1px solid rgba(255, 0, 80, .12);
+        }
+
+        .loading {
+            padding: 30px;
+            text-align: center;
+            color: rgba(255, 255, 255, .45);
+        }
+
+        .error {
+            padding: 20px;
+            border-radius: 18px;
+            color: #ff7b9f;
+            background: rgba(255, 0, 80, .08);
+            border: 1px solid rgba(255, 0, 80, .12);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 14px;
+            }
+
+            h1 {
+                font-size: 27px;
+            }
+
+            .confession {
+                padding: 17px;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+            }
+
+            .count {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header class="header">
+        <h1>Confessions</h1>
+
+        <p class="subtitle">
+            Admin dashboard
+        </p>
+    </header>
+
+    <div class="toolbar">
+
+        <button
+            id="refresh"
+            type="button"
+        >
+            Refresh
+        </button>
+
+        <span
+            id="count"
+            class="count"
+        >
+            0 confessions
+        </span>
+
+    </div>
+
+    <div id="list"></div>
+
+</div>
+
+<script>
+    const list =
+        document.getElementById("list");
+
+    const count =
+        document.getElementById("count");
+
+    const refresh =
+        document.getElementById("refresh");
+
+    function escapeDate(value) {
+        if (!value) {
+            return "Unknown date";
+        }
+
+        const date =
+            new Date(
+                value + "Z"
+            );
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+            return value;
+        }
+
+        return date.toLocaleString();
+    }
+
+    async function loadConfessions() {
+        list.innerHTML =
+            '<div class="loading">Loading...</div>';
+
+        try {
+            const response =
+                await fetch(
+                    "/api/confessions"
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Unable to load confessions."
+                );
+            }
+
+            const confessions =
+                await response.json();
+
+            count.textContent =
+                confessions.length +
+                (
+                    confessions.length === 1
+                        ? " confession"
+                        : " confessions"
+                );
+
+            if (!confessions.length) {
+                list.innerHTML =
+                    '<div class="empty">No confessions yet.</div>';
+
+                return;
+            }
+
+            list.innerHTML = "";
+
+            confessions.forEach(
+                confession => {
+                    const article =
+                        document.createElement(
+                            "article"
+                        );
+
+                    article.className =
+                        "confession";
+
+                    const message =
+                        document.createElement(
+                            "div"
+                        );
+
+                    message.className =
+                        "message";
+
+                    message.textContent =
+                        confession.message;
+
+                    const meta =
+                        document.createElement(
+                            "div"
+                        );
+
+                    meta.className =
+                        "meta";
+
+                    const date =
+                        document.createElement(
+                            "span"
+                        );
+
+                    date.className =
+                        "badge";
+
+                    date.textContent =
+                        escapeDate(
+                            confession.created_at
+                        );
+
+                    const instagram =
+                        document.createElement(
+                            "span"
+                        );
+
+                    instagram.className =
+                        "badge instagram";
+
+                    instagram.textContent =
+                        "@" +
+                        (
+                            confession.instagram_username ||
+                            "unknown"
+                        );
+
+                    meta.appendChild(date);
+                    meta.appendChild(instagram);
+
+                    const actions =
+                        document.createElement(
+                            "div"
+                        );
+
+                    actions.className =
+                        "actions";
+
+                    const deleteButton =
+                        document.createElement(
+                            "button"
+                        );
+
+                    deleteButton.className =
+                        "delete";
+
+                    deleteButton.textContent =
+                        "Delete";
+
+                    deleteButton.onclick =
+                        () =>
+                            deleteConfession(
+                                confession.id
+                            );
+
+                    actions.appendChild(
+                        deleteButton
+                    );
+
+                    article.appendChild(
+                        message
+                    );
+
+                    article.appendChild(
+                        meta
+                    );
+
+                    article.appendChild(
+                        actions
+                    );
+
+                    list.appendChild(
+                        article
+                    );
+                }
+            );
+
+        } catch (error) {
+            list.innerHTML =
+                `<div class="error">${error.message}</div>`;
+        }
+    }
+
+    async function deleteConfession(id) {
+        const confirmed =
+            confirm(
+                "Delete this confession?"
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response =
+                await fetch(
+                    "/api/confession/" + id,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Unable to delete confession."
+                );
+            }
+
+            await loadConfessions();
+
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    refresh.addEventListener(
+        "click",
+        loadConfessions
+    );
+
+    loadConfessions();
+</script>
+
+</body>
+</html>

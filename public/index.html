@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <meta name="theme-color" content="#000000">
+
+    <title>Confess</title>
+
+    <style>
+        @font-face {
+            font-family: "Akira";
+            src: url("/fonts/Akira%20Expanded%20Demo.otf") format("opentype");
+            font-display: swap;
+        }
+
+        :root {
+            --bg: #000;
+            --card: rgba(18, 18, 21, .82);
+            --border: rgba(255,255,255,.08);
+            --text: #fff;
+            --muted: #96969f;
+            --success: #79e6a2;
+            --error: #ff6675;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+
+            overflow: hidden;
+
+            background: #000;
+        }
+
+        body {
+            color: var(--text);
+
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        input,
+        textarea {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        button,
+        input,
+        textarea {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            outline: 0;
+        }
+
+
+        /* =====================================================
+           SPLASH SCREEN
+        ===================================================== */
+
+        #splash {
+            position: fixed;
+            inset: 0;
+
+            z-index: 9999;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: #000;
+
+            overflow: hidden;
+
+            transition:
+                opacity .7s ease,
+                visibility .7s ease;
+        }
+
+        #splash.hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .splash-content {
+            width: 100%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            animation:
+                splashIn 1s
+                cubic-bezier(.2,.8,.2,1)
+                both;
+        }
+
+        /*
+         * Your logo PNG contains a black square background.
+         * SCREEN blending makes the black part disappear
+         * into the black splash background.
+         */
+        .splash-logo {
+            display: block;
+
+            width: min(86vw, 480px);
+            height: auto;
+
+            object-fit: contain;
+
+            mix-blend-mode: screen;
+
+            filter: none;
+
+            animation:
+                logoReveal 1.1s
+                cubic-bezier(.2,.8,.2,1)
+                both;
+        }
+
+        @keyframes splashIn {
+            from {
+                opacity: 0;
+                transform: scale(.94);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes logoReveal {
+            from {
+                opacity: 0;
+                transform: scale(.88);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+
+        /* =====================================================
+           BACKGROUND
+        ===================================================== */
+
+        .background {
+            position: fixed;
+            inset: 0;
+
+            overflow: hidden;
+
+            pointer-events: none;
+        }
+
+        .orb {
+            position: absolute;
+
+            border-radius: 50%;
+
+            filter: blur(110px);
+
+            opacity: .07;
+        }
+
+        .orb-one {
+            width: 350px;
+            height: 350px;
+
+            top: -220px;
+            left: -180px;
+
+            background: #fff;
+
+            animation:
+                floatOne 14s
+                ease-in-out
+                infinite;
+        }
+
+        .orb-two {
+            width: 300px;
+            height: 300px;
+
+            right: -180px;
+            bottom: -180px;
+
+            background: #777;
+
+            animation:
+                floatTwo 16s
+                ease-in-out
+                infinite;
+        }
+
+        @keyframes floatOne {
+            0%,100% {
+                transform: translate(0,0);
+            }
+
+            50% {
+                transform: translate(80px,70px);
+            }
+        }
+
+        @keyframes floatTwo {
+            0%,100% {
+                transform: translate(0,0);
+            }
+
+            50% {
+                transform: translate(-70px,-60px);
+            }
+        }
+
+
+        /* =====================================================
+           APP
+        ===================================================== */
+
+        .app {
+            position: relative;
+
+            z-index: 2;
+
+            width: 100%;
+            height: 100dvh;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        header {
+            flex-shrink: 0;
+
+            height: 72px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 0 20px;
+
+            animation:
+                headerIn .8s .25s
+                both;
+        }
+
+        /*
+         * Same fix for the C-only PNG.
+         */
+        .header-logo {
+            width: 39px;
+            height: 39px;
+
+            object-fit: contain;
+
+            mix-blend-mode: screen;
+
+            filter: none;
+        }
+
+        @keyframes headerIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+
+        /* =====================================================
+           MAIN
+        ===================================================== */
+
+        main {
+            flex: 1;
+
+            min-height: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 15px 18px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 470px;
+
+            animation:
+                containerIn .8s .3s
+                cubic-bezier(.2,.8,.2,1)
+                both;
+        }
+
+        @keyframes containerIn {
+            from {
+                opacity: 0;
+                transform: translateY(25px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+
+        /* =====================================================
+           HEADING
+        ===================================================== */
+
+        .heading {
+            text-align: center;
+
+            margin-bottom: 21px;
+        }
+
+        .heading h1 {
+            margin: 0;
+
+            font-family: Akira, sans-serif;
+
+            font-size:
+                clamp(23px, 7vw, 32px);
+
+            letter-spacing: 1px;
+
+            line-height: 1.15;
+        }
+
+        .heading p {
+            margin:
+                10px
+                0
+                0;
+
+            color: var(--muted);
+
+            font-size: 13px;
+
+            line-height: 1.5;
+        }
+
+
+        /* =====================================================
+           CARD
+        ===================================================== */
+
+        .card {
+            width: 100%;
+
+            padding: 21px;
+
+            border:
+                1px solid
+                var(--border);
+
+            border-radius: 26px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,.065),
+                    rgba(255,255,255,.025)
+                );
+
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+
+            box-shadow:
+                0 25px 80px
+                rgba(0,0,0,.45),
+
+                inset 0 1px
+                rgba(255,255,255,.04);
+
+            transition:
+                border-color .3s ease,
+                box-shadow .3s ease;
+        }
+
+        .card:focus-within {
+            border-color:
+                rgba(255,255,255,.15);
+
+            box-shadow:
+                0 30px 90px
+                rgba(0,0,0,.5),
+
+                inset 0 1px
+                rgba(255,255,255,.06);
+        }
+
+
+        /* =====================================================
+           FIELDS
+        ===================================================== */
+
+        .field {
+            margin-bottom: 15px;
+        }
+
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin:
+                0
+                3px
+                8px;
+        }
+
+        .label {
+            color: #bcbcc4;
+
+            font-size: 10px;
+
+            font-weight: 600;
+
+            letter-spacing: .7px;
+
+            text-transform: uppercase;
+        }
+
+        .counter {
+            color: #5f5f68;
+
+            font-size: 10px;
+        }
+
+        textarea,
+        input {
+            width: 100%;
+
+            outline: none;
+
+            border:
+                1px solid
+                rgba(255,255,255,.07);
+
+            border-radius: 16px;
+
+            background:
+                rgba(255,255,255,.045);
+
+            color: white;
+
+            transition:
+                border-color .25s ease,
+                background .25s ease,
+                box-shadow .25s ease;
+        }
+
+        textarea {
+            min-height: 145px;
+            max-height: 145px;
+
+            resize: none;
+
+            padding: 17px;
+
+            font-size: 15px;
+
+            line-height: 1.55;
+        }
+
+        input {
+            height: 54px;
+
+            padding:
+                0
+                44px;
+
+            font-size: 14px;
+        }
+
+        textarea::placeholder,
+        input::placeholder {
+            color: #5e5e67;
+        }
+
+        textarea:focus,
+        input:focus {
+            border-color:
+                rgba(255,255,255,.2);
+
+            background:
+                rgba(255,255,255,.06);
+
+            box-shadow:
+                0 0 0 4px
+                rgba(255,255,255,.025);
+        }
+
+
+        /* =====================================================
+           INSTAGRAM
+        ===================================================== */
+
+        .instagram-wrap {
+            position: relative;
+        }
+
+        .at-symbol {
+            position: absolute;
+
+            left: 16px;
+            top: 50%;
+
+            transform:
+                translateY(-50%);
+
+            color: #777780;
+
+            font-size: 16px;
+
+            pointer-events: none;
+        }
+
+        .verify-icon {
+            position: absolute;
+
+            right: 15px;
+            top: 50%;
+
+            width: 23px;
+            height: 23px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 50%;
+
+            transform:
+                translateY(-50%)
+                scale(.7);
+
+            opacity: 0;
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            transition:
+                opacity .25s ease,
+                transform .25s ease;
+        }
+
+        .verify-icon.show {
+            opacity: 1;
+
+            transform:
+                translateY(-50%)
+                scale(1);
+        }
+
+        .verify-icon.success {
+            color: var(--success);
+
+            background:
+                rgba(121,230,162,.12);
+        }
+
+        .verify-icon.error {
+            color: var(--error);
+
+            background:
+                rgba(255,102,117,.12);
+        }
+
+        .verify-status {
+            min-height: 18px;
+
+            margin:
+                7px
+                3px
+                0;
+
+            font-size: 10px;
+        }
+
+        .verify-status.checking {
+            color: #898992;
+        }
+
+        .verify-status.success {
+            color: var(--success);
+        }
+
+        .verify-status.error {
+            color: var(--error);
+        }
+
+        /*
+         * Short privacy explanation below username.
+         */
+        .privacy-note {
+            margin:
+                3px
+                4px
+                0;
+
+            color: #64646d;
+
+            font-size: 10px;
+
+            line-height: 1.45;
+        }
+
+
+        /* =====================================================
+           SEND BUTTON
+        ===================================================== */
+
+        .send-button {
+            position: relative;
+
+            width: 100%;
+            height: 55px;
+
+            margin-top: 17px;
+
+            border-radius: 16px;
+
+            background: #fff;
+
+            color: #080808;
+
+            font-family: Akira, sans-serif;
+
+            font-size: 10px;
+
+            letter-spacing: 1px;
+
+            cursor: pointer;
+
+            overflow: hidden;
+
+            transition:
+                transform .2s ease,
+                opacity .25s ease,
+                box-shadow .25s ease;
+        }
+
+        .send-button:not(:disabled):hover {
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 12px 35px
+                rgba(255,255,255,.12);
+        }
+
+        .send-button:not(:disabled):active {
+            transform: scale(.98);
+        }
+
+        .send-button:disabled {
+            opacity: .25;
+
+            cursor: not-allowed;
+        }
+
+        .send-button::after {
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: -100%;
+
+            width: 60%;
+            height: 100%;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255,255,255,.75),
+                    transparent
+                );
+
+            transform: skewX(-20deg);
+        }
+
+        .send-button:not(:disabled):hover::after {
+            animation: shine .8s ease;
+        }
+
+        @keyframes shine {
+            from {
+                left: -100%;
+            }
+
+            to {
+                left: 140%;
+            }
+        }
+
+        .button-text {
+            transition:
+                opacity .2s ease;
+        }
+
+        .loader {
+            position: absolute;
+
+            left: 50%;
+            top: 50%;
+
+            width: 18px;
+            height: 18px;
+
+            margin:
+                -9px
+                0
+                0
+                -9px;
+
+            border:
+                2px solid
+                rgba(0,0,0,.15);
+
+            border-top-color: #080808;
+
+            border-radius: 50%;
+
+            opacity: 0;
+
+            animation:
+                spin .7s
+                linear
+                infinite;
+        }
+
+        .send-button.loading
+        .button-text {
+            opacity: 0;
+        }
+
+        .send-button.loading
+        .loader {
+            opacity: 1;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+
+        /* =====================================================
+           FOOTER
+        ===================================================== */
+
+        footer {
+            flex-shrink: 0;
+
+            height: 48px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #46464e;
+
+            font-size: 8px;
+
+            letter-spacing: 1.3px;
+
+            text-transform: uppercase;
+        }
+
+
+        /* =====================================================
+           SUCCESS
+        ===================================================== */
+
+        #success {
+            position: fixed;
+            inset: 0;
+
+            z-index: 100;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 24px;
+
+            background:
+                rgba(5,5,5,.88);
+
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+
+            opacity: 0;
+
+            visibility: hidden;
+
+            pointer-events: none;
+
+            transition:
+                opacity .45s ease,
+                visibility .45s ease;
+        }
+
+        #success.show {
+            opacity: 1;
+
+            visibility: visible;
+
+            pointer-events: auto;
+        }
+
+        .success-card {
+            width: 100%;
+
+            max-width: 390px;
+
+            padding:
+                34px
+                25px;
+
+            text-align: center;
+
+            border:
+                1px solid
+                rgba(255,255,255,.09);
+
+            border-radius: 28px;
+
+            background:
+                rgba(20,20,24,.9);
+
+            box-shadow:
+                0 30px 100px
+                rgba(0,0,0,.55);
+
+            transform:
+                translateY(20px)
+                scale(.96);
+
+            transition:
+                transform .5s
+                cubic-bezier(.2,.8,.2,1);
+        }
+
+        #success.show
+        .success-card {
+            transform:
+                translateY(0)
+                scale(1);
+        }
+
+        .success-icon {
+            width: 66px;
+            height: 66px;
+
+            margin:
+                0
+                auto
+                20px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 50%;
+
+            background:
+                rgba(121,230,162,.1);
+
+            color: var(--success);
+
+            font-size: 25px;
+        }
+
+        .success-card h2 {
+            margin: 0;
+
+            font-family: Akira, sans-serif;
+
+            font-size: 20px;
+        }
+
+        .success-card p {
+            margin:
+                12px
+                0
+                25px;
+
+            color: var(--muted);
+
+            font-size: 13px;
+
+            line-height: 1.55;
+        }
+
+        .again-button {
+            width: 100%;
+            height: 52px;
+
+            border:
+                1px solid
+                rgba(255,255,255,.08);
+
+            border-radius: 15px;
+
+            background:
+                rgba(255,255,255,.07);
+
+            color: white;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+            transition:
+                background .2s ease,
+                transform .2s ease;
+        }
+
+        .again-button:hover {
+            background:
+                rgba(255,255,255,.12);
+        }
+
+        .again-button:active {
+            transform: scale(.98);
+        }
+
+
+        /* =====================================================
+           TOAST
+        ===================================================== */
+
+        #toast {
+            position: fixed;
+
+            left: 50%;
+            bottom: 20px;
+
+            z-index: 500;
+
+            padding:
+                11px
+                16px;
+
+            border:
+                1px solid
+                rgba(255,255,255,.08);
+
+            border-radius: 12px;
+
+            background:
+                rgba(20,20,25,.95);
+
+            color: white;
+
+            font-size: 11px;
+
+            opacity: 0;
+
+            pointer-events: none;
+
+            transform:
+                translate(-50%,20px);
+
+            transition:
+                opacity .25s ease,
+                transform .25s ease;
+        }
+
+        #toast.show {
+            opacity: 1;
+
+            transform:
+                translate(-50%,0);
+        }
+
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
+
+        @media (max-width: 600px) {
+
+            header {
+                height: 62px;
+            }
+
+            .header-logo {
+                width: 34px;
+                height: 34px;
+            }
+
+            main {
+                padding:
+                    8px
+                    16px;
+            }
+
+            .heading {
+                margin-bottom: 17px;
+            }
+
+            .heading h1 {
+                font-size: 23px;
+            }
+
+            .heading p {
+                margin-top: 7px;
+
+                font-size: 12px;
+            }
+
+            .card {
+                padding: 17px;
+
+                border-radius: 23px;
+            }
+
+            textarea {
+                min-height: 130px;
+                max-height: 130px;
+            }
+
+            footer {
+                height: 36px;
+            }
+
+            .privacy-note {
+                font-size: 9px;
+            }
+        }
+
+
+        /* =====================================================
+           SMALL HEIGHT PHONES
+        ===================================================== */
+
+        @media (max-height: 700px) {
+
+            header {
+                height: 52px;
+            }
+
+            .heading {
+                margin-bottom: 11px;
+            }
+
+            .heading p {
+                margin-top: 5px;
+            }
+
+            textarea {
+                min-height: 105px;
+                max-height: 105px;
+            }
+
+            .card {
+                padding: 15px;
+            }
+
+            .field {
+                margin-bottom: 10px;
+            }
+
+            footer {
+                height: 28px;
+            }
+        }
+
+
+        /* =====================================================
+           REDUCED MOTION
+        ===================================================== */
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: .01ms !important;
+
+                animation-iteration-count: 1 !important;
+
+                transition-duration: .01ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <!-- =====================================================
+         SPLASH
+    ===================================================== -->
+
+    <div id="splash">
+
+        <div class="splash-content">
+
+            <img
+                src="/logo-full.png"
+                class="splash-logo"
+                alt="Say It Anonymously"
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BACKGROUND
+    ===================================================== -->
+
+    <div class="background">
+
+        <div class="orb orb-one"></div>
+
+        <div class="orb orb-two"></div>
+
+    </div>
+
+
+    <!-- =====================================================
+         APP
+    ===================================================== -->
+
+    <div class="app">
+
+
+        <!-- HEADER -->
+
+        <header>
+
+            <img
+                src="/logo-c.png"
+                class="header-logo"
+                alt="Confess"
+            >
+
+        </header>
+
+
+        <!-- MAIN -->
+
+        <main>
+
+            <div class="container">
+
+
+                <!-- HEADING -->
+
+                <div class="heading">
+
+                    <h1>
+                        SAY IT.
+                    </h1>
+
+                    <p>
+                        No names. No pressure.<br>
+                        Just say what you feel.
+                    </p>
+
+                </div>
+
+
+                <!-- FORM -->
+
+                <form
+                    id="confessionForm"
+                    class="card"
+                    autocomplete="off"
+                >
+
+
+                    <!-- CONFESSION -->
+
+                    <div class="field">
+
+                        <div class="label-row">
+
+                            <span class="label">
+                                Your confession
+                            </span>
+
+                            <span
+                                id="counter"
+                                class="counter"
+                            >
+                                0 / 1000
+                            </span>
+
+                        </div>
+
+
+                        <textarea
+                            id="message"
+                            name="message"
+                            maxlength="1000"
+                            placeholder="Write something you never said..."
+                            spellcheck="true"
+                        ></textarea>
+
+                    </div>
+
+
+                    <!-- INSTAGRAM -->
+
+                    <div class="field">
+
+                        <div class="label-row">
+
+                            <span class="label">
+                                Instagram
+                            </span>
+
+                        </div>
+
+
+                        <div class="instagram-wrap">
+
+                            <span class="at-symbol">
+                                @
+                            </span>
+
+
+                            <input
+                                id="instagram"
+                                name="instagram_username"
+                                type="text"
+                                maxlength="30"
+                                placeholder="your username"
+                                autocomplete="off"
+                                autocapitalize="none"
+                                autocorrect="off"
+                                spellcheck="false"
+                            >
+
+
+                            <div
+                                id="verifyIcon"
+                                class="verify-icon"
+                            ></div>
+
+                        </div>
+
+
+                        <div
+                            id="verifyStatus"
+                            class="verify-status"
+                        ></div>
+
+
+                        <div class="privacy-note">
+                            Used only to verify you're human — your identity stays private.
+                        </div>
+
+                    </div>
+
+
+                    <!-- SEND -->
+
+                    <button
+                        id="sendButton"
+                        class="send-button"
+                        type="submit"
+                        disabled
+                    >
+
+                        <span class="button-text">
+                            SEND CONFESSION
+                        </span>
+
+                        <span class="loader"></span>
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </main>
+
+
+        <!-- FOOTER -->
+
+        <footer>
+            Anonymous · Private · No judgment
+        </footer>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUCCESS SCREEN
+    ===================================================== -->
+
+    <div id="success">
+
+        <div class="success-card">
+
+            <div class="success-icon">
+                ✓
+            </div>
+
+            <h2>
+                SENT.
+            </h2>
+
+            <p>
+                Your confession has been sent anonymously.
+                Your Instagram username is not shown with it.
+            </p>
+
+            <button
+                id="againButton"
+                class="again-button"
+                type="button"
+            >
+                SEND ANOTHER
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- TOAST -->
+
+    <div id="toast"></div>
+
+
+    <script>
+
+        /* =====================================================
+           ELEMENTS
+        ===================================================== */
+
+        const splash =
+            document.getElementById("splash");
+
+        const form =
+            document.getElementById("confessionForm");
+
+        const message =
+            document.getElementById("message");
+
+        const instagram =
+            document.getElementById("instagram");
+
+        const counter =
+            document.getElementById("counter");
+
+        const sendButton =
+            document.getElementById("sendButton");
+
+        const verifyStatus =
+            document.getElementById("verifyStatus");
+
+        const verifyIcon =
+            document.getElementById("verifyIcon");
+
+        const success =
+            document.getElementById("success");
+
+        const againButton =
+            document.getElementById("againButton");
+
+        const toast =
+            document.getElementById("toast");
+
+
+        /* =====================================================
+           SPLASH
+        ===================================================== */
+
+        window.addEventListener(
+            "load",
+            () => {
+
+                setTimeout(
+                    () => {
+
+                        splash.classList.add(
+                            "hide"
+                        );
+
+                    },
+                    1500
+                );
+
+            }
+        );
+
+
+        /* =====================================================
+           COUNTER
+        ===================================================== */
+
+        function updateCounter() {
+
+            counter.textContent =
+                message.value.length +
+                " / 1000";
+
+        }
+
+        message.addEventListener(
+            "input",
+            updateCounter
+        );
+
+
+        /* =====================================================
+           USERNAME
+        ===================================================== */
+
+        function cleanUsername(value) {
+
+            return String(value || "")
+                .trim()
+                .replace(/^@+/, "");
+
+        }
+
+
+        /* =====================================================
+           VERIFICATION
+        ===================================================== */
+
+        let verifyTimer = null;
+
+        let verifyRequest = 0;
+
+        let instagramVerified = false;
+
+
+        function resetVerification() {
+
+            instagramVerified = false;
+
+            sendButton.disabled = true;
+
+            verifyIcon.className =
+                "verify-icon";
+
+            verifyIcon.textContent = "";
+
+            verifyStatus.className =
+                "verify-status";
+
+            verifyStatus.textContent = "";
+
+        }
+
+
+        function showChecking() {
+
+            instagramVerified = false;
+
+            sendButton.disabled = true;
+
+            verifyIcon.className =
+                "verify-icon";
+
+            verifyIcon.textContent = "";
+
+            verifyStatus.className =
+                "verify-status checking";
+
+            verifyStatus.textContent =
+                "Checking...";
+
+        }
+
+
+        function showVerified() {
+
+            instagramVerified = true;
+
+            sendButton.disabled =
+                message.value.trim().length === 0;
+
+            verifyIcon.className =
+                "verify-icon show success";
+
+            verifyIcon.textContent =
+                "✓";
+
+            verifyStatus.className =
+                "verify-status success";
+
+            verifyStatus.textContent =
+                "Instagram profile found";
+
+        }
+
+
+        function showNotFound() {
+
+            instagramVerified = false;
+
+            sendButton.disabled = true;
+
+            verifyIcon.className =
+                "verify-icon show error";
+
+            verifyIcon.textContent =
+                "×";
+
+            verifyStatus.className =
+                "verify-status error";
+
+            verifyStatus.textContent =
+                "Instagram profile not found";
+
+        }
+
+
+        function showVerifyError() {
+
+            instagramVerified = false;
+
+            sendButton.disabled = true;
+
+            verifyIcon.className =
+                "verify-icon show error";
+
+            verifyIcon.textContent =
+                "!";
+
+            verifyStatus.className =
+                "verify-status error";
+
+            verifyStatus.textContent =
+                "Unable to verify right now";
+
+        }
+
+
+        /* =====================================================
+           CHECK INSTAGRAM
+        ===================================================== */
+
+        async function verifyInstagram() {
+
+            const username =
+                cleanUsername(
+                    instagram.value
+                );
+
+            instagram.value =
+                username;
+
+
+            if (!username) {
+
+                resetVerification();
+
+                return;
+
+            }
+
+
+            if (
+                !/^[a-zA-Z0-9._]{1,30}$/
+                    .test(username)
+            ) {
+
+                showNotFound();
+
+                return;
+
+            }
+
+
+            showChecking();
+
+
+            const requestId =
+                ++verifyRequest;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/check-instagram?username=" +
+                        encodeURIComponent(username),
+                        {
+                            method: "GET",
+
+                            headers: {
+                                "Accept":
+                                    "application/json"
+                            },
+
+                            cache: "no-store"
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (
+                    requestId !==
+                    verifyRequest
+                ) {
+                    return;
+                }
+
+
+                if (
+                    response.ok &&
+                    data.exists === true
+                ) {
+
+                    showVerified();
+
+                } else if (
+                    response.status === 503
+                ) {
+
+                    showVerifyError();
+
+                } else {
+
+                    showNotFound();
+
+                }
+
+
+            } catch (error) {
+
+                if (
+                    requestId !==
+                    verifyRequest
+                ) {
+                    return;
+                }
+
+                showVerifyError();
+
+            }
+
+        }
+
+
+        /* =====================================================
+           INSTAGRAM INPUT
+        ===================================================== */
+
+        instagram.addEventListener(
+            "input",
+            () => {
+
+                instagramVerified = false;
+
+                sendButton.disabled = true;
+
+                clearTimeout(
+                    verifyTimer
+                );
+
+
+                const username =
+                    cleanUsername(
+                        instagram.value
+                    );
+
+
+                instagram.value =
+                    username;
+
+
+                if (!username) {
+
+                    resetVerification();
+
+                    return;
+
+                }
+
+
+                verifyTimer =
+                    setTimeout(
+                        verifyInstagram,
+                        600
+                    );
+
+            }
+        );
+
+
+        /* =====================================================
+           MESSAGE INPUT
+        ===================================================== */
+
+        message.addEventListener(
+            "input",
+            () => {
+
+                if (
+                    instagramVerified &&
+                    message.value.trim()
+                        .length > 0
+                ) {
+
+                    sendButton.disabled =
+                        false;
+
+                } else {
+
+                    sendButton.disabled =
+                        true;
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           TOAST
+        ===================================================== */
+
+        let toastTimer = null;
+
+
+        function showToast(text) {
+
+            toast.textContent =
+                text;
+
+            toast.classList.add(
+                "show"
+            );
+
+
+            clearTimeout(
+                toastTimer
+            );
+
+
+            toastTimer =
+                setTimeout(
+                    () => {
+
+                        toast.classList.remove(
+                            "show"
+                        );
+
+                    },
+                    2800
+                );
+
+        }
+
+
+        /* =====================================================
+           SUBMIT
+        ===================================================== */
+
+        form.addEventListener(
+            "submit",
+            async event => {
+
+                event.preventDefault();
+
+
+                const confession =
+                    message.value.trim();
+
+
+                const username =
+                    cleanUsername(
+                        instagram.value
+                    );
+
+
+                if (!confession) {
+
+                    showToast(
+                        "Write a confession first."
+                    );
+
+                    message.focus();
+
+                    return;
+
+                }
+
+
+                if (!username) {
+
+                    showToast(
+                        "Enter your Instagram username."
+                    );
+
+                    instagram.focus();
+
+                    return;
+
+                }
+
+
+                if (!instagramVerified) {
+
+                    showToast(
+                        "Please verify your Instagram first."
+                    );
+
+                    return;
+
+                }
+
+
+                sendButton.disabled =
+                    true;
+
+                sendButton.classList.add(
+                    "loading"
+                );
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/api/confession",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json",
+
+                                    "Accept":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        message:
+                                            confession,
+
+                                        instagram_username:
+                                            username
+                                    })
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    if (
+                        response.ok &&
+                        data.success
+                    ) {
+
+                        message.value = "";
+
+                        instagram.value = "";
+
+                        updateCounter();
+
+                        resetVerification();
+
+                        success.classList.add(
+                            "show"
+                        );
+
+                    } else {
+
+                        showToast(
+                            data.error ||
+                            "Something went wrong."
+                        );
+
+                        sendButton.disabled =
+                            !instagramVerified;
+
+                    }
+
+
+                } catch (error) {
+
+                    showToast(
+                        "Connection error. Please try again."
+                    );
+
+                    sendButton.disabled =
+                        !instagramVerified;
+
+                } finally {
+
+                    sendButton.classList.remove(
+                        "loading"
+                    );
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           SEND ANOTHER
+        ===================================================== */
+
+        againButton.addEventListener(
+            "click",
+            () => {
+
+                success.classList.remove(
+                    "show"
+                );
+
+
+                setTimeout(
+                    () => {
+
+                        message.focus();
+
+                    },
+                    350
+                );
+
+            }
+        );
+
+
+        /* =====================================================
+           USERNAME ENTER
+        ===================================================== */
+
+        instagram.addEventListener(
+            "keydown",
+            event => {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
+                    event.preventDefault();
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           INITIAL STATE
+        ===================================================== */
+
+        updateCounter();
+
+        resetVerification();
+
+    </script>
+
+</body>
+</html>
